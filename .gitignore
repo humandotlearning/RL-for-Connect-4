@@ -8,3 +8,16 @@ wheels/
 
 # Virtual environments
 .venv
+
+*.pyc
+.DS_Store
+
+/temp/
+/.project
+/.pydevproject
+
+# checkpoint
+checkpoints/
+
+# For PyCharm users
+.idea/
