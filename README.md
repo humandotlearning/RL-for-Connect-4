@@ -15,3 +15,4 @@ uv run playwright codegen https://papergames.io
 # This opens a live browser. Click through to Connect 4; it records steps and shows Python code.
 # Close when done; you can copy selectors from the right panel.
 ```
+-
