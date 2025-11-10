@@ -60,7 +60,7 @@ class Connect4Game(Game):
         return [(board, pi), (board[:, ::-1], pi[::-1])]
 
     def stringRepresentation(self, board):
-        return board.tostring()
+        return board.tobytes()
 
     @staticmethod
     def display(board):
