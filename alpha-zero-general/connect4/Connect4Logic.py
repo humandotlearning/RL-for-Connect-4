@@ -73,8 +73,14 @@ class Board():
 
     def _is_straight_winner(self, player_pieces):
         """Checks if player_pieces contains a vertical or horizontal win."""
+        # BUGFIX: Use width (len(player_pieces[0])) instead of height (len(player_pieces))
+        # to correctly calculate the range for column iterations.
+        # Original bug: Used len(player_pieces) - self.win_length + 2
+        # - For 6x7 board: range(6-4+2)=range(4) worked by coincidence for horizontal
+        # - For transposed 7x6: range(7-4+2)=range(5) was WRONG (should be range(3))
+        # Correct: Use the actual width dimension for proper column slicing
         run_lengths = [player_pieces[:, i:i + self.win_length].sum(axis=1)
-                       for i in range(len(player_pieces) - self.win_length + 2)]
+                       for i in range(len(player_pieces[0]) - self.win_length + 1)]
         return max([x.max() for x in run_lengths]) >= self.win_length
 
     def __str__(self):

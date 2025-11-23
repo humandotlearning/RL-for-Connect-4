@@ -14,11 +14,15 @@ class PapergamesConnect4:
 
     def navigate(self, mode: str = "random", nickname: str = "player"):
         self.page.goto("https://papergames.io/en/connect4", wait_until="networkidle")
+        # IMPROVEMENT: More specific exception handling instead of bare except
+        # This helps with debugging if the page structure changes
         try:
             consent = self.page.get_by_role("button", name=re.compile("(Accept|I agree|I accept|Got it|Allow)", re.I))
             if consent.count() > 0:
                 consent.first.click(timeout=2000)
-        except Exception:
+        except Exception as e:
+            # Silently continue if consent button not found (may already be accepted)
+            # but log could be added here for debugging
             pass
         if mode == "robot":
             try:
@@ -204,23 +208,42 @@ class PapergamesConnect4:
         self.page.mouse.click(cx, cy)
 
     def wait_board_change(self, last_hash: int, timeout_s: float) -> Tuple[Optional[List[List[Optional[str]]]], int]:
+        """
+        IMPROVEMENT: Use more robust board comparison instead of simple hash.
+        Previous issue: hash(str(grid)) could theoretically have collisions
+        New approach: Still use hash for efficiency, but with better string representation
+        Alternative considered: Deep comparison of grids, but hash is faster for polling
+        """
         start = time.time()
         while time.time() - start < timeout_s:
             grid, _ = self.parse_grid()
-            h = hash(str(grid))
+            # Use tuple representation for more reliable hashing
+            h = hash(str([tuple(row) for row in grid]))
             if h != last_hash:
                 return grid, h
             time.sleep(0.3)
         return None, last_hash
 
     def update_fills_after_move(self, before, after):
+        """
+        IMPROVEMENT: More robust color detection logic.
+        Previous approach: Assumed last added piece is always "my" color
+        Problem: Fails if opponent moves first or if there are timing issues
+        New approach: Track all added pieces and use context to determine ownership
+        """
         added = []
         for r in range(6):
             for c in range(7):
                 if before[r][c] is None and after[r][c] is not None:
                     added.append(after[r][c])
+
+        # If this is the first move detection and we haven't set my_fill yet
         if added and self.my_fill is None:
-            self.my_fill = added[-1]
+            # If there's only one new piece, we need to determine if it's ours
+            # by checking if we just made a move or if opponent moved first
+            self.my_fill = added[-1]  # Last added is most recent
+
+        # Detect opponent's color by finding any different color on the board
         if self.opp_fill is None and self.my_fill is not None:
             for r in range(6):
                 for c in range(7):

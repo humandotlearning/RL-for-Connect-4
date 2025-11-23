@@ -55,7 +55,10 @@ class Coach():
             canonicalBoard = self.game.getCanonicalForm(board, self.curPlayer)
             temp = int(episodeStep < self.args.tempThreshold)
 
-            pi = self.mcts.getActionProb(canonicalBoard, temp=temp)
+            # IMPROVEMENT: Add Dirichlet noise during self-play for better exploration
+            # Reason: Encourages trying diverse strategies during training
+            # Only add noise during self-play training, not during arena evaluation
+            pi = self.mcts.getActionProb(canonicalBoard, temp=temp, add_dirichlet_noise=True)
             sym = self.game.getSymmetries(canonicalBoard, pi)
             for b, p in sym:
                 trainExamples.append([b, self.curPlayer, p, None])
