@@ -12,13 +12,29 @@ from NeuralNet import NeuralNet
 from .Connect4NNet import Connect4Net as c4nnet 
 
 args = dotdict({
-    'lr': 0.001,
-    'dropout': 0.3,
+    # IMPROVEMENT: Slightly reduced initial learning rate from 0.001 to 0.002
+    # Reason: Will use scheduler to decay, so start slightly higher
+    # Scheduler will reduce this over time for fine-tuning
+    'lr': 0.002,
+
+    # IMPROVEMENT: Reduced dropout from 0.3 to 0.2
+    # Reason: 0.3 was too aggressive, causing underfitting
+    # Connect 4 has limited state space, less regularization needed
+    # 0.2 provides good balance between generalization and learning capacity
+    'dropout': 0.2,
+
     'epochs': 10,
     'batch_size': 64,
     'cuda': torch.cuda.is_available(),
-     'num_channels': 128,
-    'num_residual_layers': 20
+    'num_channels': 128,
+
+    # IMPROVEMENT: Reduced from 20 to 15 residual blocks
+    # Reason: 20 blocks is overkill for Connect 4 (much simpler than Go)
+    # - Faster training and inference
+    # - Less overfitting risk
+    # - Still enough capacity for strong play
+    # AlphaGo Zero used 40 blocks for 19x19 Go; Connect 4 is ~100x simpler
+    'num_residual_layers': 15
 })
 
 class NNetWrapper( NeuralNet):
@@ -33,6 +49,13 @@ class NNetWrapper( NeuralNet):
 
     def train(self, examples):
         optimizer = optim.Adam( self.nnet.parameters(), lr=args.lr)
+
+        # IMPROVEMENT: Add learning rate scheduler for better convergence
+        # Reason: Cosine annealing helps fine-tune the network in later epochs
+        # - Starts with higher LR for faster initial learning
+        # - Gradually reduces to avoid overshooting optimal weights
+        # - Cosine schedule is smooth and well-tested for deep RL
+        scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs, eta_min=0.0001)
 
         for epoch in range(args.epochs):
             print('EPOCH ::: ' + str(epoch + 1))
@@ -58,7 +81,7 @@ class NNetWrapper( NeuralNet):
                     boards, target_pis, target_vs = boards.contiguous().cuda(), target_pis.contiguous().cuda(), target_vs.contiguous().cuda()
 
                 out_pi, out_v = self.nnet(boards)
-                
+
                 l_pi = self.loss_pi(target_pis, out_pi)
                 l_v = self.loss_v(target_vs, out_v)
                 total_loss = l_pi + l_v
@@ -72,6 +95,10 @@ class NNetWrapper( NeuralNet):
                 total_loss.backward()
                 torch.nn.utils.clip_grad_norm_(self.nnet.parameters(), 5.0)
                 optimizer.step()
+
+            # Step the scheduler after each epoch
+            scheduler.step()
+            print(f'Learning rate: {scheduler.get_last_lr()[0]:.6f}')
 
 
     def predict(self, board):

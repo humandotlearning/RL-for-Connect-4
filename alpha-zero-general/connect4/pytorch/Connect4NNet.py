@@ -81,36 +81,7 @@ class Connect4Net(nn.Module):
 
         return p, v
 
-
-
-
-#############################################################
-# this code part will not be used
-class AZDataset(Dataset):
-    def __init__(self, data):
-        self.boards,  self.pis, self.vs = [], [], []
-        for board, pi, v in data:
-            board = np.array(board)
-            cur = (board ==1).astype(np.float32)
-            opp = (board ==-1).astype(np.float32)
-            planes = np.stack([cur, opp], axis=0)
-            self.boards.append(planes)
-            self.pis.append(np.array(pi, dtype=np.float32))
-            self.vs.append(np.array(v, dtype=np.float32))
-        self.boards = np.array(self.boards)
-        self.pis = np.array(self.pis)
-        self.vs = np.array(self.vs)
-
-    
-    def __len__(self):
-        return len(self.boards)
-    
-    def __getitem__(self, idx):
-        return (
-            torch.tensor(self.boards[idx], dtype=torch.float32), 
-            torch.tensor(self.pis[idx], dtype=torch.float32), 
-            torch.tensor(self.vs[idx], dtype=torch.float32)
-        )
-
-
-##############################################################
+# CLEANUP: Removed unused AZDataset class
+# Reason: This code was marked as "will not be used" and was never referenced
+# The training uses direct numpy array batching instead of PyTorch DataLoader
+# If DataLoader is needed in future, can be re-implemented with proper design
